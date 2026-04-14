@@ -98,7 +98,7 @@ jobs:
   # ── 2. Helm deploy ──────────────────────────────────────────────────────────
   deploy:
     name: Helm deploy
-    runs-on: ubuntu-latest
+    runs-on: deploy-cluster
     needs: build-push
     environment:
       name: ${{ github.event.inputs.environment || 'production' }}

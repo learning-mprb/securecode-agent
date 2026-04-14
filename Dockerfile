@@ -36,4 +36,4 @@ CMD ["sh", "-c", "uvicorn app.main:app \
      --host 0.0.0.0 \
      --port 8000 \
      --workers ${WORKERS:-2} \
-     --log-level ${LOG_LEVEL:-INFO}"]
+     --log-level ${LOG_LEVEL:-info}"]

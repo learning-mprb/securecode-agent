@@ -33,7 +33,7 @@ env:
   IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/code-security-agent
   HELM_RELEASE: code-security-agent
   HELM_CHART: ./helm/code-security-agent
-  HELM_NAMESPACE: default       # ← change to your namespace
+  HELM_NAMESPACE: agents       # ← change to your namespace
 
 jobs:
   # ── 1. Build & push ─────────────────────────────────────────────────────────

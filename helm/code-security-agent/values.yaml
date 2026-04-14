@@ -23,7 +23,7 @@ agent:
   maxFileSizeBytes: "204800"   # 200 KB per file
   maxFilesPerScan: "30"
   workers: "2"
-  logLevel: "INFO"
+  logLevel: "info"
 
 # ── Service ───────────────────────────────────────────────────────────────────
 service:

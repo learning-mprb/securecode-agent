@@ -1,0 +1,126 @@
+# ── CI — runs on every Pull Request ──────────────────────────────────────────
+# Jobs:
+#   1. lint     — flake8 + basic import check
+#   2. build    — docker build (no push) to catch Dockerfile errors early
+#   3. scan     — Trivy image vulnerability scan (fails on CRITICAL CVEs)
+# ─────────────────────────────────────────────────────────────────────────────
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "app/**"
+      - "Dockerfile"
+      - "requirements.txt"
+      - "helm/**"
+      - ".github/workflows/ci.yml"
+
+concurrency:
+  group: ci-${{ github.head_ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/code-security-agent
+
+jobs:
+  # ── 1. Python lint ──────────────────────────────────────────────────────────
+  lint:
+    name: Lint Python
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install linting tools
+        run: pip install flake8 pyflakes
+
+      - name: flake8
+        run: |
+          flake8 app/ \
+            --max-line-length=120 \
+            --extend-ignore=E203,W503 \
+            --statistics
+
+  # ── 2. Docker build (no push) ──────────────────────────────────────────────
+  build:
+    name: Build Docker image
+    runs-on: ubuntu-latest
+    needs: lint
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Build and export to local Docker daemon so Trivy can scan it
+      - name: Build image (local, no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: ${{ env.IMAGE_NAME }}:pr-${{ github.event.pull_request.number }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Export for the scan job
+      - name: Save image tarball
+        run: docker save ${{ env.IMAGE_NAME }}:pr-${{ github.event.pull_request.number }} -o /tmp/image.tar
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: /tmp/image.tar
+          retention-days: 1
+
+  # ── 3. Trivy vulnerability scan ────────────────────────────────────────────
+  scan:
+    name: Trivy image scan
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      security-events: write   # needed to upload SARIF to GitHub Security tab
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+          path: /tmp
+
+      - name: Load image
+        run: docker load -i /tmp/image.tar
+
+      - name: Run Trivy scan (table output)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:pr-${{ github.event.pull_request.number }}
+          format: table
+          exit-code: "1"           # Fail PR if CRITICAL CVEs found
+          severity: "CRITICAL"
+          ignore-unfixed: true
+
+      - name: Run Trivy scan (SARIF — uploads to Security tab)
+        if: always()               # Upload even if previous step failed
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:pr-${{ github.event.pull_request.number }}
+          format: sarif
+          output: trivy-results.sarif
+          severity: "CRITICAL,HIGH"
+          ignore-unfixed: true
+
+      - name: Upload SARIF to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif

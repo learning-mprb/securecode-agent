@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: code-security-agent
+  namespace: default          # Match namespace in configmap.yaml
+  labels:
+    app: code-security-agent
+    version: "1.0.0"
+spec:
+  replicas: 2                 # Scale up as needed (agent is stateless)
+  selector:
+    matchLabels:
+      app: code-security-agent
+  template:
+    metadata:
+      labels:
+        app: code-security-agent
+    spec:
+      # ── Security context (non-root, read-only filesystem) ──────────────────
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+
+      containers:
+        - name: security-agent
+          image: your-registry/code-security-agent:latest   # <── Replace with your image
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+              name: http
+
+          # ── Load all config from ConfigMap ──────────────────────────────────
+          envFrom:
+            - configMapRef:
+                name: security-agent-config
+
+          # ── Resource limits ─────────────────────────────────────────────────
+          # The container itself is lightweight; Llama 4 runs in LM Studio.
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "512Mi"
+
+          # ── Health probes ───────────────────────────────────────────────────
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+
+          # ── Read-only filesystem (best practice) ────────────────────────────
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+          # Uvicorn needs a writable /tmp for temp files
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+
+      volumes:
+        - name: tmp
+          emptyDir: {}
+
+      # Spread pods across nodes for HA
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: code-security-agent

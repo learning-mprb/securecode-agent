@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: code-security-agent-svc
+  namespace: default          # Match namespace in deployment.yaml
+  labels:
+    app: code-security-agent
+spec:
+  selector:
+    app: code-security-agent
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8000
+  type: ClusterIP             # Internal only. Use LoadBalancer or an Ingress to expose externally.
+
+---
+# ── Optional: HorizontalPodAutoscaler ────────────────────────────────────────
+# Scales replicas automatically based on CPU usage.
+# Requires metrics-server to be installed in your cluster.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: code-security-agent-hpa
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: code-security-agent
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

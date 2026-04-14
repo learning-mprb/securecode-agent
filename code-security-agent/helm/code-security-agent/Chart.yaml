@@ -1,0 +1,13 @@
+apiVersion: v2
+name: code-security-agent
+description: Security vulnerability scanner powered by Llama 4 (LM Studio / MLX)
+type: application
+version: 0.1.0          # Helm chart version — bump on chart changes
+appVersion: "1.0.0"     # Application version — kept in sync with the Docker image tag
+keywords:
+  - security
+  - llm
+  - llama4
+  - sast
+maintainers:
+  - name: your-team

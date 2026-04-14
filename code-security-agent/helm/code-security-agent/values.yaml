@@ -1,0 +1,63 @@
+# ── Image ─────────────────────────────────────────────────────────────────────
+image:
+  repository: ghcr.io/YOUR_GITHUB_ORG/code-security-agent   # replaced by CI
+  tag: latest                                                 # replaced by CI (git SHA)
+  pullPolicy: Always
+
+# ── Replicas ──────────────────────────────────────────────────────────────────
+replicaCount: 2
+
+# ── LM Studio / MLX (Llama 4) configuration ──────────────────────────────────
+llm:
+  # URL reachable from inside the cluster.
+  # If LM Studio is on a node with host networking: http://<NODE_IP>:1234/v1
+  # If it's a Kubernetes Service: http://lm-studio-svc.ai-tools.svc.cluster.local:1234/v1
+  baseUrl: "http://<LM_STUDIO_HOST>:1234/v1"
+  model: "meta-llama/llama-4-scout"
+  apiKey: "lm-studio"    # LM Studio ignores this value; any non-empty string works
+  maxTokens: "8192"
+  temperature: "0.1"
+
+# ── Agent limits ──────────────────────────────────────────────────────────────
+agent:
+  maxFileSizeBytes: "204800"   # 200 KB per file
+  maxFilesPerScan: "30"
+  workers: "2"
+  logLevel: "info"
+
+# ── Service ───────────────────────────────────────────────────────────────────
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+
+# ── HorizontalPodAutoscaler ───────────────────────────────────────────────────
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+
+# ── Resource requests / limits ────────────────────────────────────────────────
+resources:
+  requests:
+    cpu: "250m"
+    memory: "256Mi"
+  limits:
+    cpu: "1000m"
+    memory: "512Mi"
+
+# ── Namespace ─────────────────────────────────────────────────────────────────
+namespace: default
+
+# ── Image pull secrets (needed for private registries) ────────────────────────
+imagePullSecrets: []
+# - name: ghcr-pull-secret
+
+# ── Pod annotations (e.g. Prometheus scrape) ──────────────────────────────────
+podAnnotations: {}
+
+# ── Extra environment variables injected into the container ──────────────────
+extraEnv: []
+# - name: EXTRA_VAR
+#   value: "value"

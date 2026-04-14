@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: security-agent-config
+  namespace: default          # Change to your target namespace
+data:
+  # ── LM Studio / MLX endpoint ───────────────────────────────────────────────
+  # If LM Studio is running on a node (host network), use the node IP or
+  # a NodePort Service. If it is already a Kubernetes Service, use its
+  # cluster-internal DNS name, e.g. http://lm-studio.ai-tools.svc.cluster.local:1234/v1
+  LLAMA_BASE_URL: "http://<LM_STUDIO_HOST>:1234/v1"
+
+  # Model name exactly as it appears in LM Studio's loaded model list
+  LLAMA_MODEL: "meta-llama/llama-4-scout"
+
+  # LM Studio does not enforce API keys — any non-empty string works
+  LLAMA_API_KEY: "lm-studio"
+
+  # LLM generation settings
+  MAX_TOKENS: "8192"
+  TEMPERATURE: "0.1"
+
+  # Agent limits
+  MAX_FILE_SIZE_BYTES: "204800"   # 200 KB per file
+  MAX_FILES_PER_SCAN:  "30"
+
+  # Logging: debug | info | warning | error
+  LOG_LEVEL: "info"
+
+  # uvicorn workers per pod
+  WORKERS: "2"

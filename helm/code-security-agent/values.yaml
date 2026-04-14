@@ -51,8 +51,8 @@ resources:
 namespace: agents
 
 # ── Image pull secrets (needed for private registries) ────────────────────────
-imagePullSecrets: []
-# - name: ghcr-pull-secret
+imagePullSecrets:
+  - name: ghcr-secret
 
 # ── Pod annotations (e.g. Prometheus scrape) ──────────────────────────────────
 podAnnotations: {}

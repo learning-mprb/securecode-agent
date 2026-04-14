@@ -25,7 +25,7 @@ data:
   MAX_FILES_PER_SCAN:  "30"
 
   # Logging: debug | info | warning | error
-  LOG_LEVEL: "info"
+  LOG_LEVEL: "INFO"
 
   # uvicorn workers per pod
   WORKERS: "2"
